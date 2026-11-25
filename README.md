@@ -114,7 +114,7 @@ Degradation(%) =
 - 기본 환경에서의 제어 성능과 새로운 환경에서의 일반화 성능 사이의 Trade-off 분석
 
 
-## 7. 팀 구성
+## 6. 팀 구성
 
 | 역할 | 이름  | 
 | --- | ---- |
@@ -122,7 +122,7 @@ Degradation(%) =
 | 팀원 | 김태희 |
 | 팀원 | 송예원 |
 
-## 8. References
+## 7. References
 
 - Peng, X. B., Andrychowicz, M., Zaremba, W., & Abbeel, P. (2018). *Sim-to-Real Transfer of Robotic Control with Dynamics Randomization*. IEEE International Conference on Robotics and Automation (ICRA).
 - MuJoCo Documentation. [https://mujoco.readthedocs.io/](https://mujoco.readthedocs.io/)
