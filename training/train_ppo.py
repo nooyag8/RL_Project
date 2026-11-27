@@ -1,13 +1,10 @@
-
 import os
+import argparse
 
 import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import (
-    EvalCallback,
-    CheckpointCallback
-)
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 
 from configs.ppo_config import (
     ENV_NAME,
@@ -22,17 +19,25 @@ from configs.ppo_config import (
     NET_ARCH,
     SEED,
     MODEL_DIR,
-    RESULT_DIR
+    RESULT_DIR,
 )
 
 
 def main():
 
-    # 1. 학습량에 따른 저장 경로 설정
-    experiment_name = f"{TOTAL_TIMESTEPS // 1000}k"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=SEED)
+    args = parser.parse_args()
 
-    model_dir = os.path.join(MODEL_DIR, experiment_name)
-    result_dir = os.path.join(RESULT_DIR, experiment_name)
+    seed = args.seed
+
+    # 1. 저장 경로 설정
+    experiment_name = "fixed"
+    timestep_name = f"{TOTAL_TIMESTEPS // 1000}k"
+    seed_name = f"seed_{seed}"
+
+    model_dir = os.path.join(MODEL_DIR, experiment_name, timestep_name, seed_name)
+    result_dir = os.path.join(RESULT_DIR, experiment_name, timestep_name, seed_name)
 
     best_model_dir = os.path.join(model_dir, "best")
     checkpoint_dir = os.path.join(model_dir, "checkpoints")
@@ -44,7 +49,7 @@ def main():
         best_model_dir,
         checkpoint_dir,
         eval_dir,
-        tensorboard_dir
+        tensorboard_dir,
     ]:
         os.makedirs(directory, exist_ok=True)
 
@@ -59,14 +64,12 @@ def main():
         log_path=eval_dir,
         eval_freq=5000,
         n_eval_episodes=10,
-        deterministic=True
+        deterministic=True,
     )
 
     # 4. Checkpoint Callback
     checkpoint_callback = CheckpointCallback(
-        save_freq=10000,
-        save_path=checkpoint_dir,
-        name_prefix="ppo_reacher"
+        save_freq=10000, save_path=checkpoint_dir, name_prefix="ppo_reacher_fixed"
     )
 
     # 5. PPO 모델 생성
@@ -80,37 +83,30 @@ def main():
         gamma=GAMMA,
         gae_lambda=GAE_LAMBDA,
         clip_range=CLIP_RANGE,
-        policy_kwargs={
-            "net_arch": NET_ARCH
-        },
-        seed=SEED,
+        policy_kwargs={"net_arch": NET_ARCH},
+        seed=seed,
         verbose=1,
-        tensorboard_log=tensorboard_dir
+        tensorboard_log=tensorboard_dir,
     )
 
     # 6. 학습
-    print("\n===== PPO Training Started =====")
-    print(f"Training Timesteps: {TOTAL_TIMESTEPS:,}")
+    print("\n===== PPO Fixed Training Started =====")
     print(f"Experiment: {experiment_name}")
+    print(f"Seed: {seed}")
+    print(f"Training Timesteps: {TOTAL_TIMESTEPS:,}")
 
     model.learn(
         total_timesteps=TOTAL_TIMESTEPS,
-        callback=[
-            eval_callback,
-            checkpoint_callback
-        ],
-        progress_bar=True
+        callback=[eval_callback, checkpoint_callback],
+        progress_bar=True,
     )
 
     # 7. 최종 모델 저장
-    final_model_path = os.path.join(
-        model_dir,
-        "ppo_reacher_fixed"
-    )
+    final_model_path = os.path.join(model_dir, f"ppo_reacher_fixed_{seed}")
 
     model.save(final_model_path)
 
-    print("\n===== PPO Training Completed =====")
+    print("\n===== PPO Fixed Training Completed =====")
     print(f"Model saved to: {final_model_path}.zip")
     print(f"Evaluation results: {eval_dir}")
     print(f"Checkpoints: {checkpoint_dir}")
