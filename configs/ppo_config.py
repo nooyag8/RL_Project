@@ -1,10 +1,10 @@
-
 # PPO Configuration
 
 ENV_NAME = "Reacher-v5"
 
 # Training
 TOTAL_TIMESTEPS = 300_000
+# TOTAL_TIMESTEPS = 10_000 # 테스트용
 
 # PPO Hyperparameters
 LEARNING_RATE = 3e-4
