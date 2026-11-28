@@ -3,8 +3,9 @@
 T1~T5 물리 테스트 환경에서 평가하고 결과를 CSV로 저장하는 스크립트.
 
 실행 예:
-    python -m evaluation.evaluate_all --episodes 100
-    python -m evaluation.evaluate_all --episodes 10 --env-id Reacher-v4
+    python -m evaluation.evaluate_all --episodes 100 --steps 500k
+    python -m evaluation.evaluate_all --episodes 100 --steps 300k
+    python -m evaluation.evaluate_all --episodes 10 --steps 500k --env-id Reacher-v4
 """
 
 import argparse
@@ -31,32 +32,30 @@ TEST_ENVS: List[Dict[str, Any]] = [
 ]
 
 
-def find_model_path(models_root: Path, experiment: str, seed: int) -> Optional[Path]:
-    """300k 학습 모델만 탐색하며 10k 경로는 절대 선택하지 않습니다."""
+def find_model_path(models_root: Path, experiment: str, seed: int, steps: str) -> Optional[Path]:
+    """지정한 학습 스텝(예: '300k', '500k') 폴더의 모델만 탐색합니다. 다른 스텝 폴더는 선택하지 않습니다."""
     exp_dir = models_root / experiment
+    step_dir = exp_dir / steps / f"seed_{seed}"
+
     candidates = [
-        exp_dir / "300k" / f"seed_{seed}" / f"ppo_reacher_{experiment}_{seed}.zip",
-        exp_dir / "300k" / f"seed_{seed}" / "best_model.zip",
-        exp_dir / "300k" / f"seed_{seed}" / "final_model.zip",
-        exp_dir / "300k" / f"seed_{seed}" / "model.zip",
+        step_dir / f"ppo_reacher_{experiment}_{seed}.zip",
+        step_dir / "best_model.zip",
+        step_dir / "final_model.zip",
+        step_dir / "model.zip",
     ]
     for path in candidates:
         if path.exists() and "10k" not in path.parts:
             return path
 
-    seed_300k_dir = exp_dir / "300k" / f"seed_{seed}"
-    if seed_300k_dir.exists():
-        zips = sorted(
-            p for p in seed_300k_dir.rglob("*.zip")
-            if "10k" not in p.parts
-        )
+    if step_dir.exists():
+        zips = sorted(p for p in step_dir.rglob("*.zip") if "10k" not in p.parts)
         if zips:
             return zips[0]
 
-    exp_300k_dir = exp_dir / "300k"
-    if exp_300k_dir.exists():
+    exp_step_dir = exp_dir / steps
+    if exp_step_dir.exists():
         zips = sorted(
-            p for p in exp_300k_dir.rglob("*.zip")
+            p for p in exp_step_dir.rglob("*.zip")
             if "10k" not in p.parts and str(seed) in p.stem
         )
         if zips:
@@ -233,11 +232,13 @@ def main() -> None:
     parser.add_argument("--results-dir", type=str, default="results", help="Root results directory")
     parser.add_argument("--episodes", type=int, default=100, help="Episodes per test condition")
     parser.add_argument("--threshold", type=float, default=0.05, help="Success distance threshold (m)")
+    parser.add_argument("--steps", type=str, default="300k",
+                        help="평가할 모델의 학습 스텝 폴더명 (예: 300k, 500k)")
     args = parser.parse_args()
 
     models_root = Path(args.models_dir)
     results_root = Path(args.results_dir)
-    out_dir = results_root / "evaluation_t1_t5"
+    out_dir = results_root / f"evaluation_t1_t5_{args.steps}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     custom_setter = resolve_dr_setter()
@@ -246,9 +247,9 @@ def main() -> None:
 
     for exp in EXPERIMENTS:
         for seed in SEEDS:
-            model_path = find_model_path(models_root, exp, seed)
+            model_path = find_model_path(models_root, exp, seed, args.steps)
             if model_path is None:
-                print(f"[WARN] Model not found for experiment='{exp}', seed={seed} -> skipped")
+                print(f"[WARN] Model not found for experiment='{exp}', seed={seed}, steps={args.steps} -> skipped")
                 continue
 
             print(f"[INFO] Loading model: {model_path}")
@@ -270,6 +271,7 @@ def main() -> None:
                 for r in ep_rows:
                     all_episode_records.append(
                         {
+                            "train_steps": args.steps,
                             "experiment": exp,
                             "seed": seed,
                             "test_id": t_cfg["test_id"],
@@ -287,6 +289,7 @@ def main() -> None:
 
                 seed_env_summaries.append(
                     {
+                        "train_steps": args.steps,
                         "experiment": exp,
                         "seed": seed,
                         "test_id": t_cfg["test_id"],
@@ -320,7 +323,7 @@ def main() -> None:
 
     summary_df = (
         per_seed_df.groupby(
-            ["experiment", "test_id", "test_name", "mass_scale", "damping_scale"],
+            ["train_steps", "experiment", "test_id", "test_name", "mass_scale", "damping_scale"],
             as_index=False,
         )
         .agg(

@@ -3,13 +3,14 @@ T1~T5 평가 결과 CSV(t1_t5_summary.csv, t1_t5_per_seed.csv)를 읽어
 깔끔한 논문 스타일의 그래프(성공률, 성능 저하율, 평균 목표 거리)를 생성하는 스크립트.
 
 실행 예:
-    python -m evaluation.plot_t1_t5
-    python -m evaluation.plot_t1_t5 --dist-col mean_min_distance
+    python -m evaluation.plot_t1_t5 --steps 500k
+    python -m evaluation.plot_t1_t5 --steps 300k
+    python -m evaluation.plot_t1_t5 --steps 500k --dist-col mean_final_distance
 """
 
 import argparse
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -120,8 +121,8 @@ def plot_grouped_metric(
     title: str,
     ylabel: str,
     out_path: Path,
-    ref_line: float | None = None,
-    ref_label: str | None = None,
+    ref_line: Optional[float] = None,
+    ref_label: Optional[str] = None,
     show_t1_note: bool = False,
 ) -> None:
     apply_paper_style()
@@ -215,10 +216,16 @@ def plot_grouped_metric(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Plot T1-T5 evaluation metrics with seed mean ± std.")
     parser.add_argument(
+        "--steps",
+        type=str,
+        default="300k",
+        help="그래프를 그릴 학습 스텝 (예: 300k, 500k). results/evaluation_t1_t5_{steps}를 읽습니다.",
+    )
+    parser.add_argument(
         "--results-dir",
         type=str,
-        default="results/evaluation_t1_t5",
-        help="Directory containing t1_t5_summary.csv and t1_t5_per_seed.csv",
+        default=None,
+        help="결과 폴더를 직접 지정할 때 사용 (지정하면 --steps 기반 경로보다 우선)",
     )
     parser.add_argument(
         "--dist-col",
@@ -235,7 +242,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    res_dir = Path(args.results_dir)
+    if args.results_dir is not None:
+        res_dir = Path(args.results_dir)
+    else:
+        res_dir = Path("results") / f"evaluation_t1_t5_{args.steps}"
+
     summary_csv = res_dir / "t1_t5_summary.csv"
     per_seed_csv = res_dir / "t1_t5_per_seed.csv"
     plots_dir = res_dir / "plots"
@@ -247,7 +258,7 @@ def main() -> None:
         df=df,
         mean_col="success_rate_mean",
         std_col="success_rate_std",
-        title="Target Reaching Success Rate Across T1–T5",
+        title=f"Target Reaching Success Rate Across T1–T5 ({args.steps})",
         ylabel="Success Rate (%)",
         out_path=plots_dir / "fig1_t1_t5_success_rate.png",
     )
@@ -256,7 +267,7 @@ def main() -> None:
         df=df,
         mean_col="degradation_pct_mean",
         std_col="degradation_pct_std",
-        title="Performance Degradation Relative to T1",
+        title=f"Performance Degradation Relative to T1 ({args.steps})",
         ylabel="Degradation Rate (%)",
         out_path=plots_dir / "fig2_t1_t5_degradation.png",
         show_t1_note=True,
@@ -271,7 +282,7 @@ def main() -> None:
         df=df,
         mean_col="dist_mean",
         std_col="dist_std",
-        title=f"{dist_label} Across T1–T5",
+        title=f"{dist_label} Across T1–T5 ({args.steps})",
         ylabel="Distance (m)",
         out_path=plots_dir / f"fig3_t1_t5_{args.dist_col}.png",
         ref_line=args.threshold,
