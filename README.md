@@ -110,7 +110,7 @@ Degradation(%) =
 
 - 물리적 파라미터 변화가 강화학습 기반 로봇 제어에 미치는 영향 분석
 - 질량 및 관절 감쇠의 개별·복합 무작위화 효과 비교
-- Domain Ran?domization의 강건성 및 일반화 성능 평가
+- Domain Randomization의 강건성 및 일반화 성능 평가
 - 기본 환경에서의 제어 성능과 새로운 환경에서의 일반화 성능 사이의 Trade-off 분석
 
 
@@ -121,10 +121,3 @@ Degradation(%) =
 | 팀장 | 박가윤 |
 | 팀원 | 김태희 |
 | 팀원 | 송예원 |
-
-## 7. References
-
-- Peng, X. B., Andrychowicz, M., Zaremba, W., & Abbeel, P. (2018). *Sim-to-Real Transfer of Robotic Control with Dynamics Randomization*. IEEE International Conference on Robotics and Automation (ICRA).
-- MuJoCo Documentation. [https://mujoco.readthedocs.io/](https://mujoco.readthedocs.io/)
-- Gymnasium Documentation. [https://gymnasium.farama.org/](https://gymnasium.farama.org/)
-- Stable-Baselines3 Documentation. [https://stable-baselines3.readthedocs.io/](https://stable-baselines3.readthedocs.io/)
